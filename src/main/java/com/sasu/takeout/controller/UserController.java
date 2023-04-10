@@ -10,6 +10,7 @@ import com.sasu.takeout.utils.ValidateCodeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpSession;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/user")
@@ -28,8 +30,11 @@ public class UserController {
     @Autowired
     UserService userService;
 
+    @Autowired
+    private RedisTemplate redisTemplate;
+
     @PostMapping("/sendMsg")
-    public Result<String> sendMsg(@RequestBody User user, HttpSession session){
+    public Result<String> sendMsg(@RequestBody User user){
         String phone = user.getPhone();
 
         if (StringUtils.isNotEmpty(phone)){
@@ -38,7 +43,9 @@ public class UserController {
             log.info("code:{}",code);
             //接入阿里云，发送验证码
             //SMSUtils.sendMessage("短信签名","短信模板编码",phone,code);
-            session.setAttribute(phone,code);
+            //session.setAttribute(phone,code);
+            redisTemplate.opsForValue().set(phone,code,1, TimeUnit.MINUTES);
+
             return Result.success("短信验证码发送成功，请注意查收");
         }
         return Result.error("短信验证码发送失败");
@@ -49,7 +56,8 @@ public class UserController {
         String phone = map.get("phone").toString();
         String code = map.get("code").toString();
 
-        Object codeInSession = session.getAttribute(phone);
+        //Object codeInSession = session.getAttribute(phone);
+        Object codeInSession = redisTemplate.opsForValue().get(phone);
 
         if (codeInSession != null && codeInSession.equals(code)){
 
@@ -64,6 +72,8 @@ public class UserController {
                 userService.save(user);
             }
             session.setAttribute("user",user.getId());
+            redisTemplate.delete(phone);
+
             BaseContext.setCurrentId(user.getId());
             return Result.success(user);
         }

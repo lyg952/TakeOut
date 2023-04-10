@@ -42,7 +42,6 @@ public class LoginCheckFilter implements Filter {
 
         //2.判定访问路径是否放行,放行
         if (urlCheck(requestURI,url)){
-            log.info("放行的请求有：{}",requestURI);
             filterChain.doFilter(request,response);
             return;
         }
@@ -80,7 +79,7 @@ public class LoginCheckFilter implements Filter {
      * @return
      */
     private boolean urlCheck(String requestURI,String[] urls) {
-        log.info("进入到url访问路径匹配、、、、、、、、、{}",requestURI);
+        log.info("进入到url访问路径匹配---------{}",requestURI);
         for (String s : urls) {
             boolean match = PATH_MATCHER.match(s, requestURI);
             if (match) {
